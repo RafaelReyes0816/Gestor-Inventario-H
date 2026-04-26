@@ -50,6 +50,9 @@ Web API desarrollada en .NET 8 con Entity Framework Core y PostgreSQL.
 
 ## Cómo ejecutar
 ```bash
+dotnet restore
+```
+```bash
 dotnet run
 ```
 La documentación interactiva estará disponible en `http://localhost:{puerto}/swagger`
