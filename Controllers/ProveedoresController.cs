@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Gestor_Inventario_H.Data;
 using Gestor_Inventario_H.Dominio;
+using Gestor_Inventario_H.DTOs;
 
 namespace Gestor_Inventario_H.Controllers
 {
@@ -18,28 +19,28 @@ namespace Gestor_Inventario_H.Controllers
 
         // GET: api/Proveedores
         [HttpGet]
-        public async Task<IActionResult> GetProveedores()
+        public async Task<ActionResult<IEnumerable<ProveedorResponseDto>>> GetProveedores()
         {
             var proveedores = await (from p in _context.Proveedores
                                      where p.Estado != "Inactivo"
-                                     select new
+                                     select new ProveedorResponseDto
                                      {
-                                         p.Codigo,
-                                         p.Nombre
+                                         Codigo = p.Codigo,
+                                         Nombre = p.Nombre
                                      }).ToListAsync();
             return Ok(proveedores);
         }
 
-        // GET: api/Proveedores - Por código
+        // GET: api/Proveedores/PROV-001
         [HttpGet("{codigo}")]
-        public async Task<IActionResult> GetProveedor(string codigo)
+        public async Task<ActionResult<ProveedorResponseDto>> GetProveedor(string codigo)
         {
             var proveedor = await (from p in _context.Proveedores
                                    where p.Codigo == codigo && p.Estado != "Inactivo"
-                                   select new
+                                   select new ProveedorResponseDto
                                    {
-                                       p.Codigo,
-                                       p.Nombre
+                                       Codigo = p.Codigo,
+                                       Nombre = p.Nombre
                                    }).FirstOrDefaultAsync();
 
             if (proveedor == null)
@@ -50,16 +51,16 @@ namespace Gestor_Inventario_H.Controllers
 
         // POST: api/Proveedores
         [HttpPost]
-        public async Task<IActionResult> PostProveedor(string codigo, string nombre)
+        public async Task<ActionResult<ProveedorResponseDto>> PostProveedor([FromBody] ProveedorRequestDto dto)
         {
-            bool existe = await _context.Proveedores.AnyAsync(p => p.Codigo == codigo);
+            bool existe = await _context.Proveedores.AnyAsync(p => p.Codigo == dto.Codigo);
             if (existe)
                 return BadRequest(new { mensaje = "El código ya existe en la base de datos" });
 
             Proveedor proveedor = new Proveedor()
             {
-                Codigo = codigo,
-                Nombre = nombre,
+                Codigo = dto.Codigo,
+                Nombre = dto.Nombre,
                 Estado = "Activo"
             };
             _context.Proveedores.Add(proveedor);
@@ -69,9 +70,9 @@ namespace Gestor_Inventario_H.Controllers
                 new { mensaje = "Proveedor creado con éxito", proveedor.Codigo });
         }
 
-        // PUT: api/Proveedores - Por código
+        // PUT: api/Proveedores/PROV-001
         [HttpPut("{codigo}")]
-        public async Task<IActionResult> PutProveedor(string codigo, string nuevoNombre)
+        public async Task<IActionResult> PutProveedor(string codigo, [FromBody] ProveedorUpdateDto dto)
         {
             var proveedor = await (from p in _context.Proveedores
                                    where p.Codigo == codigo && p.Estado != "Inactivo"
@@ -80,14 +81,14 @@ namespace Gestor_Inventario_H.Controllers
             if (proveedor == null)
                 return NotFound(new { mensaje = "Proveedor no encontrado" });
 
-            proveedor.Nombre = nuevoNombre;
+            proveedor.Nombre = dto.NuevoNombre;
             _context.Proveedores.Update(proveedor);
             await _context.SaveChangesAsync();
 
             return Ok(new { mensaje = "Proveedor actualizado con éxito" });
         }
 
-        // DELETE: api/Proveedores - Por código utilizando Soft Delete
+        // DELETE: api/Proveedores/PROV-001
         [HttpDelete("{codigo}")]
         public async Task<IActionResult> DeleteProveedor(string codigo)
         {

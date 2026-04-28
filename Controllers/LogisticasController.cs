@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Gestor_Inventario_H.Data;
 using Gestor_Inventario_H.Dominio;
+using Gestor_Inventario_H.DTOs;
 
 namespace Gestor_Inventario_H.Controllers
 {
@@ -18,15 +19,15 @@ namespace Gestor_Inventario_H.Controllers
 
         // GET: api/Logisticas
         [HttpGet]
-        public async Task<IActionResult> GetLogisticas()
+        public async Task<ActionResult<IEnumerable<LogisticaResponseDto>>> GetLogisticas()
         {
             var logisticas = await (from l in _context.Logisticas
                                     join p in _context.Proveedores on l.ProveedorId equals p.Id
                                     join a in _context.Almacenes on l.AlmacenId equals a.Id
                                     where l.Estado != "Inactivo"
-                                    select new
+                                    select new LogisticaResponseDto
                                     {
-                                        l.Codigo,
+                                        Codigo = l.Codigo,
                                         CodigoProveedor = p.Codigo,
                                         CodigoAlmacen = a.Codigo
                                     }).ToListAsync();
@@ -35,15 +36,15 @@ namespace Gestor_Inventario_H.Controllers
 
         // GET: api/Logisticas/LOG-001
         [HttpGet("{codigo}")]
-        public async Task<IActionResult> GetLogistica(string codigo)
+        public async Task<ActionResult<LogisticaDetalleDto>> GetLogistica(string codigo)
         {
             var logistica = await (from l in _context.Logisticas
                                    join p in _context.Proveedores on l.ProveedorId equals p.Id
                                    join a in _context.Almacenes on l.AlmacenId equals a.Id
                                    where l.Codigo == codigo && l.Estado != "Inactivo"
-                                   select new
+                                   select new LogisticaDetalleDto
                                    {
-                                       l.Codigo,
+                                       CodigoLogistica = l.Codigo,
                                        CodigoProveedor = p.Codigo,
                                        NombreProveedor = p.Nombre,
                                        CodigoAlmacen = a.Codigo,
@@ -59,13 +60,13 @@ namespace Gestor_Inventario_H.Controllers
 
         // GET: api/Logisticas/Detalle  (JOIN 3 tablas: Proveedor + Logistica + Almacen)
         [HttpGet("Detalle")]
-        public async Task<IActionResult> GetLogisticasDetalle()
+        public async Task<ActionResult<IEnumerable<LogisticaDetalleDto>>> GetLogisticasDetalle()
         {
             var detalle = await (from p in _context.Proveedores
                                  join l in _context.Logisticas on p.Id equals l.ProveedorId
                                  join a in _context.Almacenes on l.AlmacenId equals a.Id
                                  where l.Estado != "Inactivo" && p.Estado != "Inactivo" && a.Estado != "Inactivo"
-                                 select new
+                                 select new LogisticaDetalleDto
                                  {
                                      CodigoLogistica = l.Codigo,
                                      CodigoProveedor = p.Codigo,
@@ -79,21 +80,21 @@ namespace Gestor_Inventario_H.Controllers
 
         // POST: api/Logisticas/crear
         [HttpPost("crear")]
-        public async Task<IActionResult> PostLogistica(string codigo, string codigoProveedor, string codigoAlmacen)
+        public async Task<ActionResult<LogisticaResponseDto>> PostLogistica([FromBody] LogisticaRequestDto dto)
         {
-            bool codigoExiste = await _context.Logisticas.AnyAsync(l => l.Codigo == codigo);
+            bool codigoExiste = await _context.Logisticas.AnyAsync(l => l.Codigo == dto.Codigo);
             if (codigoExiste)
                 return BadRequest(new { mensaje = "El código de logística ya existe" });
 
             var proveedor = await (from p in _context.Proveedores
-                                   where p.Codigo == codigoProveedor && p.Estado != "Inactivo"
+                                   where p.Codigo == dto.CodigoProveedor && p.Estado != "Inactivo"
                                    select p).FirstOrDefaultAsync();
 
             if (proveedor == null)
                 return BadRequest(new { mensaje = "Proveedor no encontrado o inactivo" });
 
             var almacen = await (from a in _context.Almacenes
-                                 where a.Codigo == codigoAlmacen && a.Estado != "Inactivo"
+                                 where a.Codigo == dto.CodigoAlmacen && a.Estado != "Inactivo"
                                  select a).FirstOrDefaultAsync();
 
             if (almacen == null)
@@ -109,7 +110,7 @@ namespace Gestor_Inventario_H.Controllers
 
             Logistica logistica = new Logistica()
             {
-                Codigo = codigo,
+                Codigo = dto.Codigo,
                 ProveedorId = proveedor.Id,
                 AlmacenId = almacen.Id,
                 Estado = "Activo"

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Gestor_Inventario_H.Data;
 using Gestor_Inventario_H.Dominio;
+using Gestor_Inventario_H.DTOs;
 
 namespace Gestor_Inventario_H.Controllers
 {
@@ -18,34 +19,35 @@ namespace Gestor_Inventario_H.Controllers
 
         // GET: api/Suministros
         [HttpGet]
-        public async Task<IActionResult> GetSuministros()
+        public async Task<ActionResult<IEnumerable<SuministroResponseDto>>> GetSuministros()
         {
             var suministros = await (from s in _context.Suministros
                                      join i in _context.Insumos on s.InsumoId equals i.Id
                                      join p in _context.Proveedores on s.ProveedorId equals p.Id
                                      where s.Estado != "Inactivo"
-                                     select new
+                                     select new SuministroResponseDto
                                      {
-                                         s.Codigo,
+                                         Codigo = s.Codigo,
                                          CodigoInsumo = i.Codigo,
                                          CodigoProveedor = p.Codigo
                                      }).ToListAsync();
             return Ok(suministros);
         }
 
-        // GET: api/Suministros
+        // GET: api/Suministros/SUM-001
         [HttpGet("{codigo}")]
-        public async Task<IActionResult> GetSuministro(string codigo)
+        public async Task<ActionResult<SuministroDetalleDto>> GetSuministro(string codigo)
         {
             var suministro = await (from s in _context.Suministros
                                     join i in _context.Insumos on s.InsumoId equals i.Id
                                     join p in _context.Proveedores on s.ProveedorId equals p.Id
                                     where s.Codigo == codigo && s.Estado != "Inactivo"
-                                    select new
+                                    select new SuministroDetalleDto
                                     {
-                                        s.Codigo,
+                                        CodigoSuministro = s.Codigo,
                                         CodigoInsumo = i.Codigo,
                                         NombreInsumo = i.Nombre,
+                                        DescripcionInsumo = i.Descripcion,
                                         CodigoProveedor = p.Codigo,
                                         NombreProveedor = p.Nombre
                                     }).FirstOrDefaultAsync();
@@ -55,19 +57,16 @@ namespace Gestor_Inventario_H.Controllers
 
             return Ok(suministro);
         }
-        
-        // Punto 7: Crear una consulta que utilice JOIN entre 3 tablas,
-        // sin exponer el Id ni el Estado(Insumo + Suministro + Proveedor)
-        // y devuelva información relevante del módulo.
-        // GET: api/Suministros/Detalle
+
+        // GET: api/Suministros/Detalle  (JOIN 3 tablas: Insumo + Suministro + Proveedor)
         [HttpGet("Detalle")]
-        public async Task<IActionResult> GetSuministrosDetalle()
+        public async Task<ActionResult<IEnumerable<SuministroDetalleDto>>> GetSuministrosDetalle()
         {
             var detalle = await (from i in _context.Insumos
                                  join s in _context.Suministros on i.Id equals s.InsumoId
                                  join p in _context.Proveedores on s.ProveedorId equals p.Id
                                  where s.Estado != "Inactivo" && i.Estado != "Inactivo" && p.Estado != "Inactivo"
-                                 select new
+                                 select new SuministroDetalleDto
                                  {
                                      CodigoSuministro = s.Codigo,
                                      CodigoInsumo = i.Codigo,
@@ -81,21 +80,21 @@ namespace Gestor_Inventario_H.Controllers
 
         // POST: api/Suministros/crear
         [HttpPost("crear")]
-        public async Task<IActionResult> PostSuministro(string codigo, string codigoInsumo, string codigoProveedor)
+        public async Task<ActionResult<SuministroResponseDto>> PostSuministro([FromBody] SuministroRequestDto dto)
         {
-            bool codigoExiste = await _context.Suministros.AnyAsync(s => s.Codigo == codigo);
+            bool codigoExiste = await _context.Suministros.AnyAsync(s => s.Codigo == dto.Codigo);
             if (codigoExiste)
                 return BadRequest(new { mensaje = "El código de suministro ya existe" });
 
             var insumo = await (from i in _context.Insumos
-                                where i.Codigo == codigoInsumo && i.Estado != "Inactivo"
+                                where i.Codigo == dto.CodigoInsumo && i.Estado != "Inactivo"
                                 select i).FirstOrDefaultAsync();
 
             if (insumo == null)
                 return BadRequest(new { mensaje = "Insumo no encontrado o inactivo" });
 
             var proveedor = await (from p in _context.Proveedores
-                                   where p.Codigo == codigoProveedor && p.Estado != "Inactivo"
+                                   where p.Codigo == dto.CodigoProveedor && p.Estado != "Inactivo"
                                    select p).FirstOrDefaultAsync();
 
             if (proveedor == null)
@@ -111,7 +110,7 @@ namespace Gestor_Inventario_H.Controllers
 
             Suministro suministro = new Suministro()
             {
-                Codigo = codigo,
+                Codigo = dto.Codigo,
                 InsumoId = insumo.Id,
                 ProveedorId = proveedor.Id,
                 Estado = "Activo"
@@ -123,7 +122,7 @@ namespace Gestor_Inventario_H.Controllers
                 new { mensaje = "Relación de suministro creada con éxito", suministro.Codigo });
         }
 
-        // DELETE: api/Suministros - Por código utilizando Soft Delete
+        // DELETE: api/Suministros/SUM-001
         [HttpDelete("{codigo}")]
         public async Task<IActionResult> DeleteSuministro(string codigo)
         {

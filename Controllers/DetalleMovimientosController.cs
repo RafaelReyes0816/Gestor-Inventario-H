@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Gestor_Inventario_H.Data;
 using Gestor_Inventario_H.Dominio;
+using Gestor_Inventario_H.DTOs;
 
 namespace Gestor_Inventario_H.Controllers
 {
@@ -18,28 +19,28 @@ namespace Gestor_Inventario_H.Controllers
 
         // GET: api/DetalleMovimientos
         [HttpGet]
-        public async Task<IActionResult> GetDetalles()
+        public async Task<ActionResult<IEnumerable<DetalleMovimientoResponseDto>>> GetDetalles()
         {
             var detalles = await (from d in _context.DetalleMovimientos
                                   join m in _context.Movimientos on d.MovimientoId equals m.Id
                                   join i in _context.Insumos on d.InsumoId equals i.Id
                                   where d.Estado != "Inactivo"
-                                  select new
+                                  select new DetalleMovimientoResponseDto
                                   {
-                                      d.Codigo,
+                                      Codigo = d.Codigo,
                                       CodigoMovimiento = m.Codigo,
                                       CodigoInsumo = i.Codigo,
                                       NombreInsumo = i.Nombre,
-                                      d.Lote,
-                                      d.FechaVencimiento,
-                                      d.Cantidad
+                                      Lote = d.Lote,
+                                      FechaVencimiento = d.FechaVencimiento,
+                                      Cantidad = d.Cantidad
                                   }).ToListAsync();
             return Ok(detalles);
         }
 
         // GET: api/DetalleMovimientos/DET-001
         [HttpGet("{codigo}")]
-        public async Task<IActionResult> GetDetalle(string codigo)
+        public async Task<ActionResult<DetalleMovimientoCompletoDto>> GetDetalle(string codigo)
         {
             var detalle = await (from d in _context.DetalleMovimientos
                                  join m in _context.Movimientos on d.MovimientoId equals m.Id
@@ -47,9 +48,9 @@ namespace Gestor_Inventario_H.Controllers
                                  join p in _context.Proveedores on d.ProveedorId equals p.Id
                                  join a in _context.Almacenes on d.AlmacenId equals a.Id
                                  where d.Codigo == codigo && d.Estado != "Inactivo"
-                                 select new
+                                 select new DetalleMovimientoCompletoDto
                                  {
-                                     d.Codigo,
+                                     Codigo = d.Codigo,
                                      CodigoMovimiento = m.Codigo,
                                      TipoMovimiento = m.TipoMovimiento,
                                      CodigoInsumo = i.Codigo,
@@ -58,9 +59,9 @@ namespace Gestor_Inventario_H.Controllers
                                      NombreProveedor = p.Nombre,
                                      CodigoAlmacen = a.Codigo,
                                      NombreAlmacen = a.Nombre,
-                                     d.Lote,
-                                     d.FechaVencimiento,
-                                     d.Cantidad
+                                     Lote = d.Lote,
+                                     FechaVencimiento = d.FechaVencimiento,
+                                     Cantidad = d.Cantidad
                                  }).FirstOrDefaultAsync();
 
             if (detalle == null)
@@ -71,7 +72,7 @@ namespace Gestor_Inventario_H.Controllers
 
         // GET: api/DetalleMovimientos/PorMovimiento/MOV-001
         [HttpGet("PorMovimiento/{codigoMovimiento}")]
-        public async Task<IActionResult> GetDetallesPorMovimiento(string codigoMovimiento)
+        public async Task<ActionResult<IEnumerable<DetalleMovimientoCompletoDto>>> GetDetallesPorMovimiento(string codigoMovimiento)
         {
             var detalles = await (from m in _context.Movimientos
                                   join d in _context.DetalleMovimientos on m.Id equals d.MovimientoId
@@ -79,75 +80,69 @@ namespace Gestor_Inventario_H.Controllers
                                   join p in _context.Proveedores on d.ProveedorId equals p.Id
                                   join a in _context.Almacenes on d.AlmacenId equals a.Id
                                   where m.Codigo == codigoMovimiento && d.Estado != "Inactivo" && m.Estado != "Inactivo"
-                                  select new
+                                  select new DetalleMovimientoCompletoDto
                                   {
-                                      CodigoDetalle = d.Codigo,
+                                      Codigo = d.Codigo,
+                                      CodigoMovimiento = m.Codigo,
+                                      TipoMovimiento = m.TipoMovimiento,
                                       CodigoInsumo = i.Codigo,
                                       NombreInsumo = i.Nombre,
                                       CodigoProveedor = p.Codigo,
                                       NombreProveedor = p.Nombre,
                                       CodigoAlmacen = a.Codigo,
                                       NombreAlmacen = a.Nombre,
-                                      d.Lote,
-                                      d.FechaVencimiento,
-                                      d.Cantidad
+                                      Lote = d.Lote,
+                                      FechaVencimiento = d.FechaVencimiento,
+                                      Cantidad = d.Cantidad
                                   }).ToListAsync();
             return Ok(detalles);
         }
 
         // POST: api/DetalleMovimientos
         [HttpPost]
-        public async Task<IActionResult> PostDetalle(
-            string codigo,
-            string codigoMovimiento,
-            string codigoInsumo,
-            string codigoProveedor,
-            string codigoAlmacen,
-            string lote,
-            DateTime fechaVencimiento,
-            int cantidad)
+        public async Task<ActionResult<DetalleMovimientoResponseDto>> PostDetalle([FromBody] DetalleMovimientoRequestDto dto)
         {
-            bool existe = await _context.DetalleMovimientos.AnyAsync(d => d.Codigo == codigo);
+            bool existe = await _context.DetalleMovimientos.AnyAsync(d => d.Codigo == dto.Codigo);
             if (existe)
                 return BadRequest(new { mensaje = "El código de detalle ya existe" });
 
             var movimiento = await (from m in _context.Movimientos
-                                    where m.Codigo == codigoMovimiento && m.Estado != "Inactivo"
+                                    where m.Codigo == dto.CodigoMovimiento && m.Estado != "Inactivo"
                                     select m).FirstOrDefaultAsync();
             if (movimiento == null)
                 return BadRequest(new { mensaje = "Movimiento no encontrado o inactivo" });
 
             var insumo = await (from i in _context.Insumos
-                                where i.Codigo == codigoInsumo && i.Estado != "Inactivo"
+                                where i.Codigo == dto.CodigoInsumo && i.Estado != "Inactivo"
                                 select i).FirstOrDefaultAsync();
             if (insumo == null)
                 return BadRequest(new { mensaje = "Insumo no encontrado o inactivo" });
 
             var proveedor = await (from p in _context.Proveedores
-                                   where p.Codigo == codigoProveedor && p.Estado != "Inactivo"
+                                   where p.Codigo == dto.CodigoProveedor && p.Estado != "Inactivo"
                                    select p).FirstOrDefaultAsync();
             if (proveedor == null)
                 return BadRequest(new { mensaje = "Proveedor no encontrado o inactivo" });
 
             var almacen = await (from a in _context.Almacenes
-                                 where a.Codigo == codigoAlmacen && a.Estado != "Inactivo"
+                                 where a.Codigo == dto.CodigoAlmacen && a.Estado != "Inactivo"
                                  select a).FirstOrDefaultAsync();
             if (almacen == null)
                 return BadRequest(new { mensaje = "Almacén no encontrado o inactivo" });
 
-            if (cantidad <= 0)
+            if (dto.Cantidad <= 0)
                 return BadRequest(new { mensaje = "La cantidad debe ser mayor a cero" });
 
             DetalleMovimiento detalle = new DetalleMovimiento()
             {
-                Codigo = codigo,
+                Codigo = dto.Codigo,
                 MovimientoId = movimiento.Id,
                 InsumoId = insumo.Id,
                 ProveedorId = proveedor.Id,
                 AlmacenId = almacen.Id,
-                Lote = lote,
-                FechaVencimiento = fechaVencimiento,
-                Cantidad = cantidad,
+                Lote = dto.Lote,
+                FechaVencimiento = dto.FechaVencimiento,
+                Cantidad = dto.Cantidad,
                 Estado = "Activo"
             };
             _context.DetalleMovimientos.Add(detalle);

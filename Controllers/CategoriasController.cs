@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Gestor_Inventario_H.Data;
 using Gestor_Inventario_H.Dominio;
+using Gestor_Inventario_H.DTOs;
 
 namespace Gestor_Inventario_H.Controllers
 {
@@ -18,28 +19,28 @@ namespace Gestor_Inventario_H.Controllers
 
         // GET: api/Categorias
         [HttpGet]
-        public async Task<IActionResult> GetCategorias()
+        public async Task<ActionResult<IEnumerable<CategoriaResponseDto>>> GetCategorias()
         {
             var categorias = await (from c in _context.Categorias
                                     where c.Estado != "Inactivo"
-                                    select new
+                                    select new CategoriaResponseDto
                                     {
-                                        c.Codigo,
-                                        c.Nombre
+                                        Codigo = c.Codigo,
+                                        Nombre = c.Nombre
                                     }).ToListAsync();
             return Ok(categorias);
         }
 
-        // GET: api/Categorias - Por código
+        // GET: api/Categorias/CAT-001
         [HttpGet("{codigo}")]
-        public async Task<IActionResult> GetCategoria(string codigo)
+        public async Task<ActionResult<CategoriaResponseDto>> GetCategoria(string codigo)
         {
             var categoria = await (from c in _context.Categorias
                                    where c.Codigo == codigo && c.Estado != "Inactivo"
-                                   select new
+                                   select new CategoriaResponseDto
                                    {
-                                       c.Codigo,
-                                       c.Nombre
+                                       Codigo = c.Codigo,
+                                       Nombre = c.Nombre
                                    }).FirstOrDefaultAsync();
 
             if (categoria == null)
@@ -50,16 +51,16 @@ namespace Gestor_Inventario_H.Controllers
 
         // POST: api/Categorias
         [HttpPost]
-        public async Task<IActionResult> PostCategoria(string codigo, string nombre)
+        public async Task<ActionResult<CategoriaResponseDto>> PostCategoria([FromBody] CategoriaRequestDto dto)
         {
-            bool existe = await _context.Categorias.AnyAsync(c => c.Codigo == codigo);
+            bool existe = await _context.Categorias.AnyAsync(c => c.Codigo == dto.Codigo);
             if (existe)
                 return BadRequest(new { mensaje = "El código ya existe en la base de datos" });
 
             Categoria categoria = new Categoria()
             {
-                Codigo = codigo,
-                Nombre = nombre,
+                Codigo = dto.Codigo,
+                Nombre = dto.Nombre,
                 Estado = "Activo"
             };
             _context.Categorias.Add(categoria);
@@ -69,9 +70,9 @@ namespace Gestor_Inventario_H.Controllers
                 new { mensaje = "Categoría creada con éxito", categoria.Codigo });
         }
 
-        // PUT: api/Categorias - Por código
+        // PUT: api/Categorias/CAT-001
         [HttpPut("{codigo}")]
-        public async Task<IActionResult> PutCategoria(string codigo, string nuevoNombre)
+        public async Task<IActionResult> PutCategoria(string codigo, [FromBody] CategoriaUpdateDto dto)
         {
             var categoria = await (from c in _context.Categorias
                                    where c.Codigo == codigo && c.Estado != "Inactivo"
@@ -80,14 +81,14 @@ namespace Gestor_Inventario_H.Controllers
             if (categoria == null)
                 return NotFound(new { mensaje = "Categoría no encontrada" });
 
-            categoria.Nombre = nuevoNombre;
+            categoria.Nombre = dto.NuevoNombre;
             _context.Categorias.Update(categoria);
             await _context.SaveChangesAsync();
 
             return Ok(new { mensaje = "Categoría actualizada con éxito" });
         }
 
-        // DELETE: api/Categorias - Por código utilizando Soft Delete
+        // DELETE: api/Categorias/CAT-001
         [HttpDelete("{codigo}")]
         public async Task<IActionResult> DeleteCategoria(string codigo)
         {

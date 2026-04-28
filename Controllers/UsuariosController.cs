@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Gestor_Inventario_H.Data;
 using Gestor_Inventario_H.Dominio;
+using Gestor_Inventario_H.DTOs;
 
 namespace Gestor_Inventario_H.Controllers
 {
@@ -18,30 +19,30 @@ namespace Gestor_Inventario_H.Controllers
 
         // GET: api/Usuarios
         [HttpGet]
-        public async Task<IActionResult> GetUsuarios()
+        public async Task<ActionResult<IEnumerable<UsuarioResponseDto>>> GetUsuarios()
         {
             var usuarios = await (from u in _context.Usuarios
                                   where u.Estado != "Inactivo"
-                                  select new
+                                  select new UsuarioResponseDto
                                   {
-                                      u.Codigo,
-                                      u.Nombre,
-                                      u.Rol
+                                      Codigo = u.Codigo,
+                                      Nombre = u.Nombre,
+                                      Rol = u.Rol
                                   }).ToListAsync();
             return Ok(usuarios);
         }
 
         // GET: api/Usuarios/USR-001
         [HttpGet("{codigo}")]
-        public async Task<IActionResult> GetUsuario(string codigo)
+        public async Task<ActionResult<UsuarioResponseDto>> GetUsuario(string codigo)
         {
             var usuario = await (from u in _context.Usuarios
                                  where u.Codigo == codigo && u.Estado != "Inactivo"
-                                 select new
+                                 select new UsuarioResponseDto
                                  {
-                                     u.Codigo,
-                                     u.Nombre,
-                                     u.Rol
+                                     Codigo = u.Codigo,
+                                     Nombre = u.Nombre,
+                                     Rol = u.Rol
                                  }).FirstOrDefaultAsync();
 
             if (usuario == null)
@@ -52,17 +53,17 @@ namespace Gestor_Inventario_H.Controllers
 
         // POST: api/Usuarios
         [HttpPost]
-        public async Task<IActionResult> PostUsuario(string codigo, string nombre, string rol)
+        public async Task<ActionResult<UsuarioResponseDto>> PostUsuario([FromBody] UsuarioRequestDto dto)
         {
-            bool existe = await _context.Usuarios.AnyAsync(u => u.Codigo == codigo);
+            bool existe = await _context.Usuarios.AnyAsync(u => u.Codigo == dto.Codigo);
             if (existe)
                 return BadRequest(new { mensaje = "El código ya existe en la base de datos" });
 
             Usuario usuario = new Usuario()
             {
-                Codigo = codigo,
-                Nombre = nombre,
-                Rol = rol,
+                Codigo = dto.Codigo,
+                Nombre = dto.Nombre,
+                Rol = dto.Rol,
                 Estado = "Activo"
             };
             _context.Usuarios.Add(usuario);
@@ -74,7 +75,7 @@ namespace Gestor_Inventario_H.Controllers
 
         // PUT: api/Usuarios/USR-001
         [HttpPut("{codigo}")]
-        public async Task<IActionResult> PutUsuario(string codigo, string nuevoNombre, string nuevoRol)
+        public async Task<IActionResult> PutUsuario(string codigo, [FromBody] UsuarioUpdateDto dto)
         {
             var usuario = await (from u in _context.Usuarios
                                  where u.Codigo == codigo && u.Estado != "Inactivo"
@@ -83,8 +84,8 @@ namespace Gestor_Inventario_H.Controllers
             if (usuario == null)
                 return NotFound(new { mensaje = "Usuario no encontrado" });
 
-            usuario.Nombre = nuevoNombre;
-            usuario.Rol = nuevoRol;
+            usuario.Nombre = dto.NuevoNombre;
+            usuario.Rol = dto.NuevoRol;
             _context.Usuarios.Update(usuario);
             await _context.SaveChangesAsync();
 

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Gestor_Inventario_H.Data;
 using Gestor_Inventario_H.Dominio;
+using Gestor_Inventario_H.DTOs;
 
 namespace Gestor_Inventario_H.Controllers
 {
@@ -18,16 +19,16 @@ namespace Gestor_Inventario_H.Controllers
 
         // GET: api/Movimientos
         [HttpGet]
-        public async Task<IActionResult> GetMovimientos()
+        public async Task<ActionResult<IEnumerable<MovimientoResponseDto>>> GetMovimientos()
         {
             var movimientos = await (from m in _context.Movimientos
                                      join u in _context.Usuarios on m.UsuarioId equals u.Id
                                      where m.Estado != "Inactivo"
-                                     select new
+                                     select new MovimientoResponseDto
                                      {
-                                         m.Codigo,
-                                         m.Fecha,
-                                         m.TipoMovimiento,
+                                         Codigo = m.Codigo,
+                                         Fecha = m.Fecha,
+                                         TipoMovimiento = m.TipoMovimiento,
                                          CodigoUsuario = u.Codigo,
                                          NombreUsuario = u.Nombre
                                      }).ToListAsync();
@@ -36,16 +37,16 @@ namespace Gestor_Inventario_H.Controllers
 
         // GET: api/Movimientos/MOV-001
         [HttpGet("{codigo}")]
-        public async Task<IActionResult> GetMovimiento(string codigo)
+        public async Task<ActionResult<MovimientoResponseDto>> GetMovimiento(string codigo)
         {
             var movimiento = await (from m in _context.Movimientos
                                     join u in _context.Usuarios on m.UsuarioId equals u.Id
                                     where m.Codigo == codigo && m.Estado != "Inactivo"
-                                    select new
+                                    select new MovimientoResponseDto
                                     {
-                                        m.Codigo,
-                                        m.Fecha,
-                                        m.TipoMovimiento,
+                                        Codigo = m.Codigo,
+                                        Fecha = m.Fecha,
+                                        TipoMovimiento = m.TipoMovimiento,
                                         CodigoUsuario = u.Codigo,
                                         NombreUsuario = u.Nombre
                                     }).FirstOrDefaultAsync();
@@ -58,17 +59,17 @@ namespace Gestor_Inventario_H.Controllers
 
         // POST: api/Movimientos
         [HttpPost]
-        public async Task<IActionResult> PostMovimiento(string codigo, string tipoMovimiento, string codigoUsuario)
+        public async Task<ActionResult<MovimientoResponseDto>> PostMovimiento([FromBody] MovimientoRequestDto dto)
         {
-            bool existe = await _context.Movimientos.AnyAsync(m => m.Codigo == codigo);
+            bool existe = await _context.Movimientos.AnyAsync(m => m.Codigo == dto.Codigo);
             if (existe)
                 return BadRequest(new { mensaje = "El código de movimiento ya existe" });
 
-            if (tipoMovimiento != "Entrada" && tipoMovimiento != "Salida")
+            if (dto.TipoMovimiento != "Entrada" && dto.TipoMovimiento != "Salida")
                 return BadRequest(new { mensaje = "El tipo de movimiento debe ser 'Entrada' o 'Salida'" });
 
             var usuario = await (from u in _context.Usuarios
-                                 where u.Codigo == codigoUsuario && u.Estado != "Inactivo"
+                                 where u.Codigo == dto.CodigoUsuario && u.Estado != "Inactivo"
                                  select u).FirstOrDefaultAsync();
 
             if (usuario == null)
@@ -76,9 +77,9 @@ namespace Gestor_Inventario_H.Controllers
 
             Movimiento movimiento = new Movimiento()
             {
-                Codigo = codigo,
+                Codigo = dto.Codigo,
                 Fecha = DateTime.UtcNow,
-                TipoMovimiento = tipoMovimiento,
+                TipoMovimiento = dto.TipoMovimiento,
                 UsuarioId = usuario.Id,
                 Estado = "Activo"
             };
@@ -91,7 +92,7 @@ namespace Gestor_Inventario_H.Controllers
 
         // PUT: api/Movimientos/MOV-001
         [HttpPut("{codigo}")]
-        public async Task<IActionResult> PutMovimiento(string codigo, string nuevoTipo, string codigoUsuario)
+        public async Task<IActionResult> PutMovimiento(string codigo, [FromBody] MovimientoUpdateDto dto)
         {
             var movimiento = await (from m in _context.Movimientos
                                     where m.Codigo == codigo && m.Estado != "Inactivo"
@@ -100,17 +101,17 @@ namespace Gestor_Inventario_H.Controllers
             if (movimiento == null)
                 return NotFound(new { mensaje = "Movimiento no encontrado" });
 
-            if (nuevoTipo != "Entrada" && nuevoTipo != "Salida")
+            if (dto.NuevoTipo != "Entrada" && dto.NuevoTipo != "Salida")
                 return BadRequest(new { mensaje = "El tipo de movimiento debe ser 'Entrada' o 'Salida'" });
 
             var usuario = await (from u in _context.Usuarios
-                                 where u.Codigo == codigoUsuario && u.Estado != "Inactivo"
+                                 where u.Codigo == dto.CodigoUsuario && u.Estado != "Inactivo"
                                  select u).FirstOrDefaultAsync();
 
             if (usuario == null)
                 return BadRequest(new { mensaje = "Usuario no encontrado o inactivo" });
 
-            movimiento.TipoMovimiento = nuevoTipo;
+            movimiento.TipoMovimiento = dto.NuevoTipo;
             movimiento.UsuarioId = usuario.Id;
             _context.Movimientos.Update(movimiento);
             await _context.SaveChangesAsync();

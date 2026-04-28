@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Gestor_Inventario_H.Data;
 using Gestor_Inventario_H.Dominio;
+using Gestor_Inventario_H.DTOs;
 
 namespace Gestor_Inventario_H.Controllers
 {
@@ -18,30 +19,30 @@ namespace Gestor_Inventario_H.Controllers
 
         // GET: api/Insumos
         [HttpGet]
-        public async Task<IActionResult> GetInsumos()
+        public async Task<ActionResult<IEnumerable<InsumoResponseDto>>> GetInsumos()
         {
             var insumos = await (from i in _context.Insumos
                                  where i.Estado != "Inactivo"
-                                 select new
+                                 select new InsumoResponseDto
                                  {
-                                     i.Codigo,
-                                     i.Nombre,
-                                     i.Descripcion
+                                     Codigo = i.Codigo,
+                                     Nombre = i.Nombre,
+                                     Descripcion = i.Descripcion
                                  }).ToListAsync();
             return Ok(insumos);
         }
 
-        // GET: api/Insumos - Por código
+        // GET: api/Insumos/INS-001
         [HttpGet("{codigo}")]
-        public async Task<IActionResult> GetInsumo(string codigo)
+        public async Task<ActionResult<InsumoResponseDto>> GetInsumo(string codigo)
         {
             var insumo = await (from i in _context.Insumos
                                 where i.Codigo == codigo && i.Estado != "Inactivo"
-                                select new
+                                select new InsumoResponseDto
                                 {
-                                    i.Codigo,
-                                    i.Nombre,
-                                    i.Descripcion
+                                    Codigo = i.Codigo,
+                                    Nombre = i.Nombre,
+                                    Descripcion = i.Descripcion
                                 }).FirstOrDefaultAsync();
 
             if (insumo == null)
@@ -50,37 +51,34 @@ namespace Gestor_Inventario_H.Controllers
             return Ok(insumo);
         }
 
-        // Punto 6: Crear una consulta que utilice JOIN entre 2 tablas,
-        // sin exponer el Id ni el Estado(Insumo + Categoria)
-        // y devuelva información relevante del módulo.
-        // GET: api/Insumos/PorCategoria
+        // GET: api/Insumos/PorCategoria  (JOIN 2 tablas: Insumo + Categoria)
         [HttpGet("PorCategoria")]
-        public async Task<IActionResult> GetInsumosPorCategoria()
+        public async Task<ActionResult<IEnumerable<InsumoPorCategoriaDto>>> GetInsumosPorCategoria()
         {
             var resultado = await (from i in _context.Insumos
                                    join c in _context.Categorias on i.CategoriaId equals c.Id
                                    where i.Estado != "Inactivo" && c.Estado != "Inactivo"
-                                   select new
+                                   select new InsumoPorCategoriaDto
                                    {
                                        CodigoInsumo = i.Codigo,
                                        NombreInsumo = i.Nombre,
                                        DescripcionInsumo = i.Descripcion,
-                                       NombreCategoria = c.Nombre,
-                                       CodigoCategoria = c.Codigo
+                                       CodigoCategoria = c.Codigo,
+                                       NombreCategoria = c.Nombre
                                    }).ToListAsync();
             return Ok(resultado);
         }
 
         // POST: api/Insumos
         [HttpPost]
-        public async Task<IActionResult> PostInsumo(string codigo, string nombre, string descripcion, string codigoCategoria)
+        public async Task<ActionResult<InsumoResponseDto>> PostInsumo([FromBody] InsumoRequestDto dto)
         {
-            bool insumoExiste = await _context.Insumos.AnyAsync(i => i.Codigo == codigo);
+            bool insumoExiste = await _context.Insumos.AnyAsync(i => i.Codigo == dto.Codigo);
             if (insumoExiste)
                 return BadRequest(new { mensaje = "El código de insumo ya existe en la base de datos" });
 
             var categoria = await (from c in _context.Categorias
-                                   where c.Codigo == codigoCategoria && c.Estado != "Inactivo"
+                                   where c.Codigo == dto.CodigoCategoria && c.Estado != "Inactivo"
                                    select c).FirstOrDefaultAsync();
 
             if (categoria == null)
@@ -88,9 +86,9 @@ namespace Gestor_Inventario_H.Controllers
 
             Insumo insumo = new Insumo()
             {
-                Codigo = codigo,
-                Nombre = nombre,
-                Descripcion = descripcion,
+                Codigo = dto.Codigo,
+                Nombre = dto.Nombre,
+                Descripcion = dto.Descripcion,
                 CategoriaId = categoria.Id,
                 Estado = "Activo"
             };
@@ -101,9 +99,9 @@ namespace Gestor_Inventario_H.Controllers
                 new { mensaje = "Insumo creado con éxito", insumo.Codigo });
         }
 
-        // PUT: api/Insumos - Por código
+        // PUT: api/Insumos/INS-001
         [HttpPut("{codigo}")]
-        public async Task<IActionResult> PutInsumo(string codigo, string nuevoNombre, string nuevaDescripcion, string codigoCategoria)
+        public async Task<IActionResult> PutInsumo(string codigo, [FromBody] InsumoUpdateDto dto)
         {
             var insumo = await (from i in _context.Insumos
                                 where i.Codigo == codigo && i.Estado != "Inactivo"
@@ -113,14 +111,14 @@ namespace Gestor_Inventario_H.Controllers
                 return NotFound(new { mensaje = "Insumo no encontrado" });
 
             var categoria = await (from c in _context.Categorias
-                                   where c.Codigo == codigoCategoria && c.Estado != "Inactivo"
+                                   where c.Codigo == dto.CodigoCategoria && c.Estado != "Inactivo"
                                    select c).FirstOrDefaultAsync();
 
             if (categoria == null)
                 return BadRequest(new { mensaje = "Categoría no encontrada o inactiva" });
 
-            insumo.Nombre = nuevoNombre;
-            insumo.Descripcion = nuevaDescripcion;
+            insumo.Nombre = dto.NuevoNombre;
+            insumo.Descripcion = dto.NuevaDescripcion;
             insumo.CategoriaId = categoria.Id;
             _context.Insumos.Update(insumo);
             await _context.SaveChangesAsync();
@@ -128,7 +126,7 @@ namespace Gestor_Inventario_H.Controllers
             return Ok(new { mensaje = "Insumo actualizado con éxito" });
         }
 
-        // DELETE: api/Insumos - Por código utilizando Soft Delete
+        // DELETE: api/Insumos/INS-001
         [HttpDelete("{codigo}")]
         public async Task<IActionResult> DeleteInsumo(string codigo)
         {

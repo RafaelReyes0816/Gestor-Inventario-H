@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Gestor_Inventario_H.Data;
 using Gestor_Inventario_H.Dominio;
+using Gestor_Inventario_H.DTOs;
 
 namespace Gestor_Inventario_H.Controllers
 {
@@ -18,15 +19,15 @@ namespace Gestor_Inventario_H.Controllers
 
         // GET: api/Distribuciones
         [HttpGet]
-        public async Task<IActionResult> GetDistribuciones()
+        public async Task<ActionResult<IEnumerable<DistribucionResponseDto>>> GetDistribuciones()
         {
             var distribuciones = await (from d in _context.Distribuciones
                                         join i in _context.Insumos on d.InsumoId equals i.Id
                                         join a in _context.Almacenes on d.AlmacenId equals a.Id
                                         where d.Estado != "Inactivo"
-                                        select new
+                                        select new DistribucionResponseDto
                                         {
-                                            d.Codigo,
+                                            Codigo = d.Codigo,
                                             CodigoInsumo = i.Codigo,
                                             CodigoAlmacen = a.Codigo
                                         }).ToListAsync();
@@ -35,15 +36,15 @@ namespace Gestor_Inventario_H.Controllers
 
         // GET: api/Distribuciones/DIS-001
         [HttpGet("{codigo}")]
-        public async Task<IActionResult> GetDistribucion(string codigo)
+        public async Task<ActionResult<DistribucionDetalleDto>> GetDistribucion(string codigo)
         {
             var distribucion = await (from d in _context.Distribuciones
                                       join i in _context.Insumos on d.InsumoId equals i.Id
                                       join a in _context.Almacenes on d.AlmacenId equals a.Id
                                       where d.Codigo == codigo && d.Estado != "Inactivo"
-                                      select new
+                                      select new DistribucionDetalleDto
                                       {
-                                          d.Codigo,
+                                          CodigoDistribucion = d.Codigo,
                                           CodigoInsumo = i.Codigo,
                                           NombreInsumo = i.Nombre,
                                           CodigoAlmacen = a.Codigo,
@@ -59,13 +60,13 @@ namespace Gestor_Inventario_H.Controllers
 
         // GET: api/Distribuciones/Detalle  (JOIN 3 tablas: Insumo + Distribucion + Almacen)
         [HttpGet("Detalle")]
-        public async Task<IActionResult> GetDistribucionesDetalle()
+        public async Task<ActionResult<IEnumerable<DistribucionDetalleDto>>> GetDistribucionesDetalle()
         {
             var detalle = await (from i in _context.Insumos
                                  join d in _context.Distribuciones on i.Id equals d.InsumoId
                                  join a in _context.Almacenes on d.AlmacenId equals a.Id
                                  where d.Estado != "Inactivo" && i.Estado != "Inactivo" && a.Estado != "Inactivo"
-                                 select new
+                                 select new DistribucionDetalleDto
                                  {
                                      CodigoDistribucion = d.Codigo,
                                      CodigoInsumo = i.Codigo,
@@ -79,21 +80,21 @@ namespace Gestor_Inventario_H.Controllers
 
         // POST: api/Distribuciones/crear
         [HttpPost("crear")]
-        public async Task<IActionResult> PostDistribucion(string codigo, string codigoInsumo, string codigoAlmacen)
+        public async Task<ActionResult<DistribucionResponseDto>> PostDistribucion([FromBody] DistribucionRequestDto dto)
         {
-            bool codigoExiste = await _context.Distribuciones.AnyAsync(d => d.Codigo == codigo);
+            bool codigoExiste = await _context.Distribuciones.AnyAsync(d => d.Codigo == dto.Codigo);
             if (codigoExiste)
                 return BadRequest(new { mensaje = "El código de distribución ya existe" });
 
             var insumo = await (from i in _context.Insumos
-                                where i.Codigo == codigoInsumo && i.Estado != "Inactivo"
+                                where i.Codigo == dto.CodigoInsumo && i.Estado != "Inactivo"
                                 select i).FirstOrDefaultAsync();
 
             if (insumo == null)
                 return BadRequest(new { mensaje = "Insumo no encontrado o inactivo" });
 
             var almacen = await (from a in _context.Almacenes
-                                 where a.Codigo == codigoAlmacen && a.Estado != "Inactivo"
+                                 where a.Codigo == dto.CodigoAlmacen && a.Estado != "Inactivo"
                                  select a).FirstOrDefaultAsync();
 
             if (almacen == null)
@@ -109,7 +110,7 @@ namespace Gestor_Inventario_H.Controllers
 
             Distribucion distribucion = new Distribucion()
             {
-                Codigo = codigo,
+                Codigo = dto.Codigo,
                 InsumoId = insumo.Id,
                 AlmacenId = almacen.Id,
                 Estado = "Activo"
