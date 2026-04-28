@@ -19,5 +19,7 @@ namespace Gestor_Inventario_H.Dominio
         public Categoria? Categoria { get; set; }
 
         public List<Suministro>? Suministros { get; set; }
+        public List<Distribucion>? Distribuciones { get; set; }
+        public List<DetalleMovimiento>? DetalleMovimientos { get; set; }
     }
 }
