@@ -19,5 +19,6 @@ namespace Gestor_Inventario_H.Data
         public DbSet<Usuario> Usuarios { get; set; } = default!;
         public DbSet<Movimiento> Movimientos { get; set; } = default!;
         public DbSet<DetalleMovimiento> DetalleMovimientos { get; set; } = default!;
+        public DbSet<Cama> Camas { get; set; } = default!;
     }
 }
