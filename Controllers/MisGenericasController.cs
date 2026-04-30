@@ -4,7 +4,7 @@ using Gestor_Inventario_H.Data;
 
 namespace Gestor_Inventario_H.Controllers
 {
-    // Consultas genéricas obligatorias (5)
+    // Consultas genéricas obligatorias
     // G1 — JOIN entre 2 tablas
     // G2 — GROUP BY + COUNT
     // G3 — GROUP BY + SUM
