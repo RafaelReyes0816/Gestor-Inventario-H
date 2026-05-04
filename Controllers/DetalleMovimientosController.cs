@@ -141,7 +141,7 @@ namespace Gestor_Inventario_H.Controllers
                 ProveedorId = proveedor.Id,
                 AlmacenId = almacen.Id,
                 Lote = dto.Lote,
-                FechaVencimiento = dto.FechaVencimiento,
+                FechaVencimiento = DateTime.SpecifyKind(dto.FechaVencimiento, DateTimeKind.Utc),
                 Cantidad = dto.Cantidad,
                 Estado = "Activo"
             };

@@ -25,10 +25,8 @@ namespace Gestor_Inventario_H.Controllers
                                where c.Estado != "Inactivo"
                                select new CamaResponseDto
                                {
-                                   Codigo = c.Codigo,
-                                   Numero = c.Numero,
-                                   Sala = c.Sala,
-                                   Tipo = c.Tipo
+                                   Codigo   = c.Codigo,
+                                   Cantidad = c.Cantidad
                                }).ToListAsync();
             return Ok(camas);
         }
@@ -41,32 +39,14 @@ namespace Gestor_Inventario_H.Controllers
                               where c.Codigo == codigo && c.Estado != "Inactivo"
                               select new CamaResponseDto
                               {
-                                  Codigo = c.Codigo,
-                                  Numero = c.Numero,
-                                  Sala = c.Sala,
-                                  Tipo = c.Tipo
+                                  Codigo   = c.Codigo,
+                                  Cantidad = c.Cantidad
                               }).FirstOrDefaultAsync();
 
             if (cama == null)
                 return NotFound(new { mensaje = "Cama no encontrada" });
 
             return Ok(cama);
-        }
-
-        // GET: api/Camas/PorSala/Cirugia
-        [HttpGet("PorSala/{sala}")]
-        public async Task<ActionResult<IEnumerable<CamaResponseDto>>> GetCamasPorSala(string sala)
-        {
-            var camas = await (from c in _context.Camas
-                               where c.Sala == sala && c.Estado != "Inactivo"
-                               select new CamaResponseDto
-                               {
-                                   Codigo = c.Codigo,
-                                   Numero = c.Numero,
-                                   Sala = c.Sala,
-                                   Tipo = c.Tipo
-                               }).ToListAsync();
-            return Ok(camas);
         }
 
         // POST: api/Camas
@@ -77,19 +57,20 @@ namespace Gestor_Inventario_H.Controllers
             if (existe)
                 return BadRequest(new { mensaje = "El código ya existe en la base de datos" });
 
+            if (dto.Cantidad <= 0)
+                return BadRequest(new { mensaje = "La cantidad debe ser mayor a cero" });
+
             Cama cama = new Cama()
             {
-                Codigo = dto.Codigo,
-                Numero = dto.Numero,
-                Sala = dto.Sala,
-                Tipo = dto.Tipo,
-                Estado = "Activo"
+                Codigo   = dto.Codigo,
+                Cantidad = dto.Cantidad,
+                Estado   = "Activo"
             };
             _context.Camas.Add(cama);
             await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetCama), new { codigo = cama.Codigo },
-                new { mensaje = "Cama registrada con éxito", cama.Codigo });
+                new { mensaje = "Stock de camas registrado con éxito", cama.Codigo });
         }
 
         // PUT: api/Camas/CAM-001
@@ -103,13 +84,14 @@ namespace Gestor_Inventario_H.Controllers
             if (cama == null)
                 return NotFound(new { mensaje = "Cama no encontrada" });
 
-            cama.Numero = dto.NuevoNumero;
-            cama.Sala = dto.NuevaSala;
-            cama.Tipo = dto.NuevoTipo;
+            if (dto.NuevaCantidad <= 0)
+                return BadRequest(new { mensaje = "La cantidad debe ser mayor a cero" });
+
+            cama.Cantidad = dto.NuevaCantidad;
             _context.Camas.Update(cama);
             await _context.SaveChangesAsync();
 
-            return Ok(new { mensaje = "Cama actualizada con éxito" });
+            return Ok(new { mensaje = "Stock de camas actualizado con éxito" });
         }
 
         // DELETE: api/Camas/CAM-001
@@ -127,7 +109,7 @@ namespace Gestor_Inventario_H.Controllers
             _context.Camas.Update(cama);
             await _context.SaveChangesAsync();
 
-            return Ok(new { mensaje = "Cama desactivada correctamente" });
+            return Ok(new { mensaje = "Registro de camas desactivado correctamente" });
         }
     }
 }

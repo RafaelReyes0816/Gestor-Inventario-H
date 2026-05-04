@@ -120,5 +120,37 @@ namespace Gestor_Inventario_H.Controllers
                                    }).ToListAsync();
             return Ok(resultado);
         }
+
+        // Stock actual por insumo por almacén
+        // SUM(Entradas) - SUM(Salidas) agrupado por insumo y almacén
+        [HttpGet("stock-actual")]
+        public async Task<IActionResult> StockActual()
+        {
+            var resultado = await (from d in _context.DetalleMovimientos
+                                   join m in _context.Movimientos on d.MovimientoId equals m.Id
+                                   join i in _context.Insumos on d.InsumoId equals i.Id
+                                   join a in _context.Almacenes on d.AlmacenId equals a.Id
+                                   where d.Estado != "Inactivo" && m.Estado != "Inactivo" &&
+                                         i.Estado != "Inactivo" && a.Estado != "Inactivo"
+                                   group new { d, m } by new
+                                   {
+                                       CodInsumo  = i.Codigo,
+                                       NomInsumo  = i.Nombre,
+                                       CodAlmacen = a.Codigo,
+                                       NomAlmacen = a.Nombre
+                                   } into g
+                                   select new
+                                   {
+                                       CodigoInsumo  = g.Key.CodInsumo,
+                                       NombreInsumo  = g.Key.NomInsumo,
+                                       CodigoAlmacen = g.Key.CodAlmacen,
+                                       NombreAlmacen = g.Key.NomAlmacen,
+                                       Entradas    = g.Where(x => x.m.TipoMovimiento == "Entrada").Sum(x => x.d.Cantidad),
+                                       Salidas     = g.Where(x => x.m.TipoMovimiento == "Salida").Sum(x => x.d.Cantidad),
+                                       StockActual = g.Where(x => x.m.TipoMovimiento == "Entrada").Sum(x => x.d.Cantidad)
+                                                   - g.Where(x => x.m.TipoMovimiento == "Salida").Sum(x => x.d.Cantidad)
+                                   }).ToListAsync();
+            return Ok(resultado);
+        }
     }
 }

@@ -61,21 +61,21 @@ namespace Gestor_Inventario_H.Controllers
             return Ok(resultado);
         }
 
-        // UC08 — Camas disponibles por sala
-        // ¿Cuántas camas activas tiene cada sala del hospital?
-        [HttpGet("camas-por-sala")]
-        public async Task<IActionResult> CamasPorSala()
+        // UC08 — Stock total de camas disponibles
+        // ¿Cuántas camas hay en total en el hospital?
+        [HttpGet("total-camas")]
+        public async Task<IActionResult> TotalCamas()
         {
             var resultado = await (from c in _context.Camas
                                    where c.Estado != "Inactivo"
-                                   group c by c.Sala into g
-                                   orderby g.Key
                                    select new
                                    {
-                                       Sala = g.Key,
-                                       TotalCamas = g.Count()
+                                       c.Codigo,
+                                       c.Cantidad
                                    }).ToListAsync();
-            return Ok(resultado);
+
+            var totalGeneral = resultado.Sum(c => c.Cantidad);
+            return Ok(new { TotalCamas = totalGeneral, Registros = resultado });
         }
     }
 }
