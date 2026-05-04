@@ -14,7 +14,7 @@ namespace Gestor_Inventario_H.Dominio
         public int ProveedorId { get; set; }
         public int AlmacenId { get; set; }
         public string Lote { get; set; } = null!;
-        public DateTime FechaVencimiento { get; set; }
+        public DateTime? FechaVencimiento { get; set; }
         public int Cantidad { get; set; }
         public string Estado { get; set; } = "Activo";
 

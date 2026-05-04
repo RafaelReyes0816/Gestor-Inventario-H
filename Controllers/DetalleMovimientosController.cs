@@ -133,6 +133,9 @@ namespace Gestor_Inventario_H.Controllers
             if (dto.Cantidad <= 0)
                 return BadRequest(new { mensaje = "La cantidad debe ser mayor a cero" });
 
+            if (movimiento.TipoMovimiento == "Entrada" && dto.FechaVencimiento == null)
+                return BadRequest(new { mensaje = "La fecha de vencimiento es obligatoria para movimientos de Entrada" });
+
             DetalleMovimiento detalle = new DetalleMovimiento()
             {
                 Codigo = dto.Codigo,
@@ -141,7 +144,9 @@ namespace Gestor_Inventario_H.Controllers
                 ProveedorId = proveedor.Id,
                 AlmacenId = almacen.Id,
                 Lote = dto.Lote,
-                FechaVencimiento = DateTime.SpecifyKind(dto.FechaVencimiento, DateTimeKind.Utc),
+                FechaVencimiento = dto.FechaVencimiento.HasValue
+                    ? DateTime.SpecifyKind(dto.FechaVencimiento.Value, DateTimeKind.Utc)
+                    : null,
                 Cantidad = dto.Cantidad,
                 Estado = "Activo"
             };

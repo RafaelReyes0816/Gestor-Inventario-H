@@ -121,6 +121,55 @@ namespace Gestor_Inventario_H.Controllers
             return Ok(resultado);
         }
 
+        // Stock bajo — insumos con stock actual <= 20 unidades
+        // GET /api/MisInventario/stock-bajo
+        [HttpGet("stock-bajo")]
+        public async Task<IActionResult> StockBajo()
+        {
+            const int umbral = 20;
+
+            // EF Core no puede filtrar por un valor calculado sobre un GroupBy en la misma query.
+            // Se materializa primero y el filtro del umbral se aplica en memoria.
+            var todoElStock = await (from d in _context.DetalleMovimientos
+                                     join m in _context.Movimientos on d.MovimientoId equals m.Id
+                                     join i in _context.Insumos on d.InsumoId equals i.Id
+                                     join a in _context.Almacenes on d.AlmacenId equals a.Id
+                                     where d.Estado != "Inactivo" && m.Estado != "Inactivo" &&
+                                           i.Estado != "Inactivo" && a.Estado != "Inactivo"
+                                     group new { d, m } by new
+                                     {
+                                         CodInsumo  = i.Codigo,
+                                         NomInsumo  = i.Nombre,
+                                         CodAlmacen = a.Codigo,
+                                         NomAlmacen = a.Nombre
+                                     } into g
+                                     select new
+                                     {
+                                         CodigoInsumo  = g.Key.CodInsumo,
+                                         NombreInsumo  = g.Key.NomInsumo,
+                                         CodigoAlmacen = g.Key.CodAlmacen,
+                                         NombreAlmacen = g.Key.NomAlmacen,
+                                         StockActual   = g.Where(x => x.m.TipoMovimiento == "Entrada").Sum(x => x.d.Cantidad)
+                                                       - g.Where(x => x.m.TipoMovimiento == "Salida").Sum(x => x.d.Cantidad)
+                                     }).ToListAsync();
+
+            var stock = todoElStock
+                .Where(x  => x.StockActual <= umbral)
+                .OrderBy(x => x.StockActual)
+                .Select(x  => new
+                {
+                    x.CodigoInsumo,
+                    x.NombreInsumo,
+                    x.CodigoAlmacen,
+                    x.NombreAlmacen,
+                    x.StockActual,
+                    Critico = x.StockActual <= 0
+                })
+                .ToList();
+
+            return Ok(new { Umbral = umbral, Total = stock.Count, Alertas = stock });
+        }
+
         // Stock actual por insumo por almacén
         // SUM(Entradas) - SUM(Salidas) agrupado por insumo y almacén
         [HttpGet("stock-actual")]

@@ -8,7 +8,7 @@ namespace Gestor_Inventario_H.DTOs
         public string CodigoProveedor { get; set; } = null!;
         public string CodigoAlmacen { get; set; } = null!;
         public string Lote { get; set; } = null!;
-        public DateTime FechaVencimiento { get; set; }
+        public DateTime? FechaVencimiento { get; set; }
         public int Cantidad { get; set; }
     }
 
@@ -19,7 +19,7 @@ namespace Gestor_Inventario_H.DTOs
         public string CodigoInsumo { get; set; } = null!;
         public string NombreInsumo { get; set; } = null!;
         public string Lote { get; set; } = null!;
-        public DateTime FechaVencimiento { get; set; }
+        public DateTime? FechaVencimiento { get; set; }
         public int Cantidad { get; set; }
     }
 
@@ -35,7 +35,7 @@ namespace Gestor_Inventario_H.DTOs
         public string CodigoAlmacen { get; set; } = null!;
         public string NombreAlmacen { get; set; } = null!;
         public string Lote { get; set; } = null!;
-        public DateTime FechaVencimiento { get; set; }
+        public DateTime? FechaVencimiento { get; set; }
         public int Cantidad { get; set; }
     }
 }
